@@ -4,9 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RNR Document Stamping System</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;500;600;700&family=Source+Sans+3:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -83,8 +80,12 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="receivedBy">Received By <span class="optional">(optional)</span></label>
-                        <input type="text" id="receivedBy" name="receivedBy" placeholder="Enter receiver name">
+                        <label for="receivedBy">Received By</label>
+                        <div class="receiver-dropdown">
+                            <select id="receivedBy">
+                                <option value="">-- Select --</option>
+                            </select>
+                        </div>
                     </div>
 
                     <div class="form-group">

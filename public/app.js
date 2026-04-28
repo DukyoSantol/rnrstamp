@@ -23,6 +23,9 @@ const dateInput = document.getElementById('date');
 const timeInput = document.getElementById('time');
 const receivedByInput = document.getElementById('receivedBy');
 const positionSelect = document.getElementById('position');
+const addUserBtn = document.getElementById('addUserBtn');
+
+let receiversList = [];
 
 function setDefaultDateTime() {
     const now = new Date();
@@ -34,6 +37,90 @@ function setDefaultDateTime() {
 }
 
 setDefaultDateTime();
+loadReceivers();
+
+function loadReceivers() {
+    fetch(`${API_BASE}/api/receivers`)
+        .then(res => res.json())
+        .then(data => {
+            receiversList = data.receivers || [];
+            receivedByInput.innerHTML = '<option value="">-- Select --</option>';
+            receiversList.forEach(name => {
+                const opt = document.createElement('option');
+                opt.value = name;
+                opt.textContent = name;
+                receivedByInput.appendChild(opt);
+            });
+            // Add "Add User" option
+            const addOpt = document.createElement('option');
+            addOpt.value = '__add__';
+            addOpt.textContent = '+ Add User';
+            receivedByInput.appendChild(addOpt);
+            
+            if (receiversList.length > 0) {
+                receivedByInput.value = receiversList[0];
+            }
+        })
+        .catch(err => console.error('Error loading receivers:', err));
+}
+
+receivedByInput.addEventListener('change', () => {
+    if (receivedByInput.value === '__add__') {
+        addNewUser();
+    }
+});
+
+function addNewUser() {
+    const name = prompt('Enter new user name:');
+    if (!name || !name.trim()) {
+        receivedByInput.value = receiversList[0] || '';
+        return;
+    }
+    
+    fetch(`${API_BASE}/api/receivers`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim() })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            loadReceivers();
+            showToast('User added', 'success');
+        } else {
+            showToast(data.error || 'Failed to add', 'error');
+            receivedByInput.value = receiversList[0] || '';
+        }
+    })
+    .catch(err => {
+        showToast('Failed to add user', 'error');
+        receivedByInput.value = receiversList[0] || '';
+    });
+}
+
+receivedByInput.addEventListener('contextmenu', async (e) => {
+    e.preventDefault();
+    const currentName = receivedByInput.value;
+    if (!currentName || currentName === '' || currentName === '__add__') return;
+    if (!confirm(`Delete "${currentName}" from the list?`)) return;
+    
+    try {
+        const res = await fetch(`${API_BASE}/api/receivers`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: currentName })
+        });
+        const data = await res.json();
+        if (data.success) {
+            loadReceivers();
+            showToast('User deleted', 'success');
+        } else {
+            showToast(data.error || 'Failed to delete', 'error');
+        }
+    } catch (err) {
+        showToast('Failed to delete user', 'error');
+    }
+});
 
 uploadZone.addEventListener('click', () => fileInput.click());
 

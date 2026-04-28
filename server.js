@@ -7,13 +7,21 @@ const fs = require('fs');
 const path = require('path');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
+
+// Detect if running as packaged exe
+const isPkg = typeof process.pkg !== 'undefined';
+const appDir = isPkg ? path.dirname(process.execPath) : __dirname;
+const uploadDir = isPkg ? path.join(appDir, 'uploads') : path.join(__dirname, 'uploads');
+const publicDir = isPkg ? path.join(appDir, 'public') : path.join(__dirname, 'public');
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static('public'));
+app.use(express.static(publicDir));
 
-const uploadDir = path.join(__dirname, 'uploads');
+// In-memory file map
+const uploadedFiles = new Map();
+
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
 }
@@ -28,9 +36,6 @@ const fileFilter = (req, file, cb) => {
 };
 
 const upload = multer({ storage, fileFilter, limits: { fileSize: 50 * 1024 * 1024 } });
-
-// In-memory file map
-const uploadedFiles = new Map();
 
 // ── Upload ──────────────────────────────────────────────────────────────────
 app.post('/api/upload', upload.single('pdf'), async (req, res) => {
@@ -105,6 +110,53 @@ app.delete('/api/cleanup/:fileId', (req, res) => {
     res.json({ success: true });
 });
 
+// ── Receivers API ───────────────────────────────────────────────────────────────
+const receiversFile = path.join(appDir, 'receivers.json');
+
+function loadReceivers() {
+    try {
+        if (fs.existsSync(receiversFile)) {
+            const data = fs.readFileSync(receiversFile, 'utf-8');
+            return JSON.parse(data).receivers || [];
+        }
+    } catch (e) { console.error('Error loading receivers:', e.message); }
+    return ['Ellen Mancera', 'Shiely Dilangalen'];
+}
+
+function saveReceivers(list) {
+    fs.writeFileSync(receiversFile, JSON.stringify({ receivers: list }, null, 2));
+}
+
+app.get('/api/receivers', (req, res) => {
+    res.json({ receivers: loadReceivers() });
+});
+
+app.post('/api/receivers', (req, res) => {
+    const { name } = req.body;
+    if (!name || !name.trim()) {
+        return res.status(400).json({ error: 'Name is required' });
+    }
+    const list = loadReceivers();
+    const newName = name.trim();
+    if (list.includes(newName)) {
+        return res.status(400).json({ error: 'Name already exists' });
+    }
+    list.push(newName);
+    saveReceivers(list);
+    res.json({ success: true, receivers: list });
+});
+
+app.delete('/api/receivers', (req, res) => {
+    const { name } = req.body;
+    if (!name || !name.trim()) {
+        return res.status(400).json({ error: 'Name is required' });
+    }
+    let list = loadReceivers();
+    list = list.filter(n => n !== name.trim());
+    saveReceivers(list);
+    res.json({ success: true, receivers: list });
+});
+
 // ── Error handler ────────────────────────────────────────────────────────────
 app.use((err, req, res, next) => {
     if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE')
@@ -115,8 +167,15 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
-    console.log('Stamp: Using programmatic BLACK text stamp (no images)');
+    console.log(`Upload dir: ${uploadDir}`);
+    console.log(`Public dir: ${publicDir}`);
+    console.log(`Don't close this window`);
 });
+
+// Keep process alive for exe
+if (isPkg) {
+    process.stdin.resume();
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  STAMP DRAWING

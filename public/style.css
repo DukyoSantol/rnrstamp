@@ -686,3 +686,29 @@ select {
     margin-top: 5px;
     font-weight: 500;
 }
+
+.receiver-dropdown {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.receiver-dropdown select {
+    flex: 1;
+}
+
+.add-user-option {
+    padding: 10px 16px;
+    background: transparent;
+    border: 2px dashed var(--border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    color: var(--text-secondary);
+    font-size: 14px;
+    transition: var(--transition);
+}
+
+.add-user-option:hover {
+    border-color: var(--success);
+    color: var(--success);
+}
