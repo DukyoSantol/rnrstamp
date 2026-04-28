@@ -30,5 +30,8 @@
   },
   "devDependencies": {
     "@yao-pkg/pkg": "^6.19.0"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }
