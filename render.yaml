@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: rnrstamp
+    env: node
+    buildCommand: npm install
+    startCommand: node index.js
+    repo: https://github.com/DukyoSantol/rnrstamp
