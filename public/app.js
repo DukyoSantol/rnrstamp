@@ -39,6 +39,8 @@ function setDefaultDateTime() {
 setDefaultDateTime();
 loadReceivers();
 
+setInterval(setDefaultDateTime, 30000);
+
 function loadReceivers() {
     fetch(`${API_BASE}/api/receivers`)
         .then(res => res.json())
