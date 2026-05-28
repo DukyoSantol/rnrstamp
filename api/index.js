@@ -13,6 +13,10 @@ const uploadedFiles = new Map();
 const DEFAULT_RECEIVERS = ['Ellen Mancera', 'Shiely Dilangalen'];
 const publicDir = path.join(__dirname, '..', 'public');
 
+app.use((req, res, next) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+    next();
+});
 app.use(express.static(publicDir));
 
 const storage = multer.memoryStorage();
