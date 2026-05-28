@@ -47,22 +47,26 @@ function loadReceivers() {
         .then(res => res.json())
         .then(data => {
             receiversList = data.receivers || [];
-            receivedByInput.innerHTML = '<option value="">-- Select --</option>';
-            receiversList.forEach(name => {
-                const opt = document.createElement('option');
-                opt.value = name;
-                opt.textContent = name;
-                receivedByInput.appendChild(opt);
-            });
-            // Add "Add User" option
-            const addOpt = document.createElement('option');
-            addOpt.value = '__add__';
-            addOpt.textContent = '+ Add User';
-            receivedByInput.appendChild(addOpt);
-            
-
+            populateReceivers(receiversList);
         })
-        .catch(err => console.error('Error loading receivers:', err));
+        .catch(err => {
+            console.error('Error loading receivers:', err);
+            populateReceivers(['Ellen Mancera', 'Shiely Dilangalen']);
+        });
+}
+
+function populateReceivers(list) {
+    receivedByInput.innerHTML = '<option value="">-- Select --</option>';
+    list.forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        receivedByInput.appendChild(opt);
+    });
+    const addOpt = document.createElement('option');
+    addOpt.value = '__add__';
+    addOpt.textContent = '+ Add User';
+    receivedByInput.appendChild(addOpt);
 }
 
 receivedByInput.addEventListener('change', () => {
