@@ -32,14 +32,17 @@ function setDefaultDateTime() {
     const dateStr = now.toISOString().split('T')[0];
     const hours = String(now.getHours()).padStart(2, '0');
     const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
     dateInput.value = dateStr;
     timeInput.value = `${hours}:${minutes}`;
+    const clock = document.getElementById('liveClock');
+    if (clock) clock.textContent = `${hours}:${minutes}:${seconds}`;
 }
 
 setDefaultDateTime();
 loadReceivers();
 
-setInterval(setDefaultDateTime, 30000);
+setInterval(setDefaultDateTime, 1000);
 
 function loadReceivers() {
     fetch(`${API_BASE}/api/receivers`)

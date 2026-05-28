@@ -268,6 +268,17 @@ label {
     color: var(--accent);
 }
 
+#liveClock {
+    font-family: 'Courier New', monospace;
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--accent);
+    background: rgba(231, 76, 60, 0.08);
+    padding: 0.4rem 0.7rem;
+    border-radius: var(--radius-sm);
+    letter-spacing: 1px;
+}
+
 .optional {
     font-weight: 400;
     text-transform: none;
