@@ -35,8 +35,6 @@ function setDefaultDateTime() {
     const seconds = String(now.getSeconds()).padStart(2, '0');
     dateInput.value = dateStr;
     timeInput.value = `${hours}:${minutes}`;
-    const clock = document.getElementById('liveClock');
-    if (clock) clock.textContent = `${hours}:${minutes}:${seconds}`;
 }
 
 setDefaultDateTime();

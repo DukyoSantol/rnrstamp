@@ -268,30 +268,6 @@ label {
     color: var(--accent);
 }
 
-.time-wrapper {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.time-wrapper input[type="time"] {
-    flex: 1;
-    min-width: 0;
-}
-
-#liveClock {
-    font-family: 'Courier New', monospace;
-    font-weight: 700;
-    font-size: 1rem;
-    color: var(--accent);
-    background: rgba(231, 76, 60, 0.08);
-    padding: 0.4rem 0.7rem;
-    border-radius: var(--radius-sm);
-    letter-spacing: 1px;
-    white-space: nowrap;
-    flex-shrink: 0;
-}
-
 .optional {
     font-weight: 400;
     text-transform: none;
