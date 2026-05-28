@@ -21,7 +21,7 @@ const publicDir = path.join(appDir, 'public');
 
 app.use(cors());
 app.use(express.json());
-if (!process.env.VERCEL) app.use(express.static(publicDir));
+app.use(express.static(publicDir));
 
 // In-memory file map
 const uploadedFiles = new Map();
