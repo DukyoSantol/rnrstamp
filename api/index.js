@@ -3,7 +3,6 @@ const multer = require('multer');
 const { PDFDocument, rgb, StandardFonts } = require('pdf-lib');
 const { v4: uuidv4 } = require('uuid');
 const cors = require('cors');
-const path = require('path');
 
 const app = express();
 app.use(cors());
@@ -11,14 +10,6 @@ app.use(express.json());
 
 const uploadedFiles = new Map();
 const DEFAULT_RECEIVERS = ['Ellen Mancera', 'Shiely Dilangalen'];
-const publicDir = path.join(__dirname, '..', 'public');
-
-app.use((req, res, next) => {
-    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
-    next();
-});
-app.use(express.static(publicDir));
-
 const storage = multer.memoryStorage();
 const fileFilter = (req, file, cb) => {
     file.mimetype === 'application/pdf' ? cb(null, true) : cb(new Error('Only PDF files are allowed'), false);
@@ -105,10 +96,7 @@ app.use((err, req, res, next) => {
     res.status(500).json({ error: 'Something went wrong!' });
 });
 
-// Serve index.html for root
-app.get('/', (req, res) => {
-    res.sendFile(path.join(publicDir, 'index.html'));
-});
+
 
 module.exports = app;
 
