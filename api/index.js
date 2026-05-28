@@ -1,23 +1,26 @@
 const express = require('express');
+const multer = require('multer');
 const { PDFDocument, rgb, StandardFonts } = require('pdf-lib');
 const cors = require('cors');
 
 const app = express();
 app.use(cors());
-app.use(express.json({ limit: '50mb' }));
 
 const DEFAULT_RECEIVERS = ['Ellen Mancera', 'Shiely Dilangalen'];
+
+const storage = multer.memoryStorage();
+const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 
 app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', receivers: DEFAULT_RECEIVERS });
 });
 
-app.post('/api/process', async (req, res) => {
+app.post('/api/process', upload.single('pdf'), async (req, res) => {
     try {
-        const { fileBase64, docNumber, date, time, receivedBy, position, pages } = req.body;
-        if (!fileBase64) return res.status(400).json({ error: 'No file provided' });
+        const pdfBuffer = req.file ? req.file.buffer : (req.body.fileBase64 ? Buffer.from(req.body.fileBase64, 'base64') : null);
+        if (!pdfBuffer) return res.status(400).json({ error: 'No file provided' });
 
-        const pdfBuffer = Buffer.from(fileBase64, 'base64');
+        const { docNumber, date, time, receivedBy, position, pages } = req.body;
         const pdfDoc = await PDFDocument.load(pdfBuffer);
         const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
         const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -52,6 +55,8 @@ app.get('/api/receivers', (req, res) => {
 });
 
 app.use((err, req, res, next) => {
+    if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE')
+        return res.status(400).json({ error: 'File too large. Maximum size is 10MB' });
     console.error(err.stack);
     res.status(500).json({ error: 'Something went wrong!' });
 });

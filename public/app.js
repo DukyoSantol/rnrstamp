@@ -89,8 +89,8 @@ function handleFile(file) {
         showToast('Please upload a PDF file', 'error');
         return;
     }
-    if (file.size > 3 * 1024 * 1024) {
-        showToast('File size must be less than 3MB for serverless deployment', 'error');
+    if (file.size > 10 * 1024 * 1024) {
+        showToast('File size must be less than 10MB', 'error');
         return;
     }
     currentFileData = file;
@@ -119,21 +119,12 @@ stampForm.addEventListener('submit', async (e) => {
         return;
     }
 
-    const formData = {
-        docNumber: docNumberInput.value.trim(),
-        date: dateInput.value,
-        time: timeInput.value,
-        receivedBy: receivedByInput.value.trim(),
-        position: positionSelect.value,
-        pages: document.querySelector('input[name="pages"]:checked').value
-    };
-
-    if (!formData.docNumber) {
+    const docNumber = docNumberInput.value.trim();
+    if (!docNumber) {
         showToast('Please enter document number', 'error');
         return;
     }
-
-    if (!formData.date || !formData.time) {
+    if (!dateInput.value || !timeInput.value) {
         showToast('Please enter date and time', 'error');
         return;
     }
@@ -141,12 +132,18 @@ stampForm.addEventListener('submit', async (e) => {
     setLoading(true);
 
     try {
-        formData.fileBase64 = await fileToBase64(currentFileData);
+        const formData = new FormData();
+        formData.append('pdf', currentFileData);
+        formData.append('docNumber', docNumber);
+        formData.append('date', dateInput.value);
+        formData.append('time', timeInput.value);
+        formData.append('receivedBy', receivedByInput.value.trim());
+        formData.append('position', positionSelect.value);
+        formData.append('pages', document.querySelector('input[name="pages"]:checked').value);
 
         const response = await fetch(`${API_BASE}/api/process`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(formData)
+            body: formData
         });
 
         const data = await response.json();
@@ -168,15 +165,6 @@ stampForm.addEventListener('submit', async (e) => {
         setLoading(false);
     }
 });
-
-function fileToBase64(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result.split(',')[1]);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-    });
-}
 
 function base64ToBlob(base64, mimeType) {
     const byteCharacters = atob(base64);
