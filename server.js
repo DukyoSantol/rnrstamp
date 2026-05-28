@@ -27,7 +27,7 @@ app.use(express.static(publicDir));
 const uploadedFiles = new Map();
 
 if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
+    try { fs.mkdirSync(uploadDir, { recursive: true }); } catch (_) {}
 }
 
 const storage = multer.memoryStorage();
@@ -122,7 +122,7 @@ function loadReceivers() {
 }
 
 function saveReceivers(list) {
-    fs.writeFileSync(receiversFile, JSON.stringify({ receivers: list }, null, 2));
+    try { fs.writeFileSync(receiversFile, JSON.stringify({ receivers: list }, null, 2)); } catch (_) {}
 }
 
 app.get('/api/receivers', (req, res) => {
