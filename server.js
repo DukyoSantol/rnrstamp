@@ -21,7 +21,7 @@ const publicDir = path.join(appDir, 'public');
 
 app.use(cors());
 app.use(express.json());
-if (!process.env.VERCEL) app.use(express.static(publicDir));
+app.use(express.static(publicDir));
 
 // In-memory file map
 const uploadedFiles = new Map();
@@ -37,6 +37,10 @@ const fileFilter = (req, file, cb) => {
 };
 
 const upload = multer({ storage, fileFilter, limits: { fileSize: 50 * 1024 * 1024 } });
+
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', receivers: ['Ellen Mancera', 'Shiely Dilangalen'] });
+});
 
 // ── Upload ──────────────────────────────────────────────────────────────────
 app.post('/api/upload', upload.single('pdf'), async (req, res) => {
