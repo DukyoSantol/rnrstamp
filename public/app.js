@@ -60,9 +60,7 @@ function loadReceivers() {
             addOpt.textContent = '+ Add User';
             receivedByInput.appendChild(addOpt);
             
-            if (receiversList.length > 0) {
-                receivedByInput.value = receiversList[0];
-            }
+
         })
         .catch(err => console.error('Error loading receivers:', err));
 }
