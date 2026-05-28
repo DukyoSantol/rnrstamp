@@ -21,12 +21,12 @@ const publicDir = path.join(appDir, 'public');
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static(publicDir));
+if (!process.env.VERCEL) app.use(express.static(publicDir));
 
 // In-memory file map
 const uploadedFiles = new Map();
 
-if (!fs.existsSync(uploadDir)) {
+if (!process.env.VERCEL && !fs.existsSync(uploadDir)) {
     try { fs.mkdirSync(uploadDir, { recursive: true }); } catch (_) {}
 }
 
@@ -109,19 +109,23 @@ app.delete('/api/cleanup/:fileId', (req, res) => {
 });
 
 // ── Receivers API ───────────────────────────────────────────────────────────────
-const receiversFile = path.join(appDir, 'receivers.json');
+const DEFAULT_RECEIVERS = ['Ellen Mancera', 'Shiely Dilangalen'];
 
 function loadReceivers() {
+    if (process.env.VERCEL) return DEFAULT_RECEIVERS;
+    const receiversFile = path.join(appDir, 'receivers.json');
     try {
         if (fs.existsSync(receiversFile)) {
             const data = fs.readFileSync(receiversFile, 'utf-8');
-            return JSON.parse(data).receivers || [];
+            return JSON.parse(data).receivers || DEFAULT_RECEIVERS;
         }
     } catch (e) { console.error('Error loading receivers:', e.message); }
-    return ['Ellen Mancera', 'Shiely Dilangalen'];
+    return DEFAULT_RECEIVERS;
 }
 
 function saveReceivers(list) {
+    if (process.env.VERCEL) return;
+    const receiversFile = path.join(appDir, 'receivers.json');
     try { fs.writeFileSync(receiversFile, JSON.stringify({ receivers: list }, null, 2)); } catch (_) {}
 }
 
