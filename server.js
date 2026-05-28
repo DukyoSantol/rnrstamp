@@ -11,9 +11,13 @@ const PORT = process.env.PORT || 3001;
 
 // Detect if running as packaged exe
 const isPkg = typeof process.pkg !== 'undefined';
-const appDir = isPkg ? path.dirname(process.execPath) : __dirname;
-const uploadDir = isPkg ? path.join(appDir, 'uploads') : path.join(__dirname, 'uploads');
-const publicDir = isPkg ? path.join(appDir, 'public') : path.join(__dirname, 'public');
+const appDir = (() => {
+  if (isPkg) return path.dirname(process.execPath);
+  if (path.basename(__dirname) === 'api') return path.dirname(__dirname);
+  return __dirname;
+})();
+const uploadDir = path.join(appDir, 'uploads');
+const publicDir = path.join(appDir, 'public');
 
 app.use(cors());
 app.use(express.json());
@@ -26,10 +30,7 @@ if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => { cb(null, uploadDir); },
-    filename: (req, file, cb) => { cb(null, `${uuidv4()}-${file.originalname}`); }
-});
+const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
     file.mimetype === 'application/pdf' ? cb(null, true) : cb(new Error('Only PDF files are allowed'), false);
@@ -42,12 +43,11 @@ app.post('/api/upload', upload.single('pdf'), async (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
-        const pdfBytes = fs.readFileSync(req.file.path);
-        const pdfDoc = await PDFDocument.load(pdfBytes);
+        const pdfDoc = await PDFDocument.load(req.file.buffer);
         const pageCount = pdfDoc.getPageCount();
 
         const fileId = uuidv4();
-        uploadedFiles.set(fileId, { path: req.file.path, originalname: req.file.originalname });
+        uploadedFiles.set(fileId, { buffer: req.file.buffer, originalname: req.file.originalname });
 
         res.json({ success: true, fileId, filename: req.file.originalname, pageCount });
     } catch (error) {
@@ -67,8 +67,7 @@ app.post('/api/process', async (req, res) => {
         }
 
         const fileInfo = uploadedFiles.get(fileId);
-        const pdfBytes = fs.readFileSync(fileInfo.path);
-        const pdfDoc = await PDFDocument.load(pdfBytes);
+        const pdfDoc = await PDFDocument.load(fileInfo.buffer);
 
         const helveticaBold    = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
         const helvetica        = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -105,8 +104,7 @@ app.post('/api/process', async (req, res) => {
 
 // ── Cleanup ─────────────────────────────────────────────────────────────────
 app.delete('/api/cleanup/:fileId', (req, res) => {
-    const info = uploadedFiles.get(req.params.fileId);
-    if (info) { try { fs.unlinkSync(info.path); } catch (_) {} uploadedFiles.delete(req.params.fileId); }
+    uploadedFiles.delete(req.params.fileId);
     res.json({ success: true });
 });
 
@@ -165,17 +163,20 @@ app.use((err, req, res, next) => {
     res.status(500).json({ error: 'Something went wrong!' });
 });
 
-app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-    console.log(`Upload dir: ${uploadDir}`);
-    console.log(`Public dir: ${publicDir}`);
-    console.log(`Don't close this window`);
-});
+if (!process.env.VERCEL) {
+    app.listen(PORT, () => {
+        console.log(`Server running on http://localhost:${PORT}`);
+        console.log(`Upload dir: ${uploadDir}`);
+        console.log(`Public dir: ${publicDir}`);
+        console.log(`Don't close this window`);
+    });
 
-// Keep process alive for exe
-if (isPkg) {
-    process.stdin.resume();
+    if (isPkg) {
+        process.stdin.resume();
+    }
 }
+
+module.exports = app;
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  STAMP DRAWING
