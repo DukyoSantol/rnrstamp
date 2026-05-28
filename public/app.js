@@ -42,10 +42,26 @@ function loadReceivers() {
     fetch(`${API_BASE}/api/receivers`)
         .then(res => res.json())
         .then(data => {
-            receiversList = data.receivers || [];
-            populateReceivers(receiversList);
+            const defaults = data.receivers || ['Ellen Mancera', 'Shiely Dilangalen'];
+            const saved = getSavedReceivers();
+            const merged = [...new Set([...defaults, ...saved])];
+            receiversList = merged;
+            saveReceivers(merged);
+            populateReceivers(merged);
         })
-        .catch(() => populateReceivers(['Ellen Mancera', 'Shiely Dilangalen']));
+        .catch(() => {
+            const saved = getSavedReceivers();
+            receiversList = saved.length ? saved : ['Ellen Mancera', 'Shiely Dilangalen'];
+            populateReceivers(receiversList);
+        });
+}
+
+function getSavedReceivers() {
+    try { return JSON.parse(localStorage.getItem('rnr_receivers') || '[]'); } catch { return []; }
+}
+
+function saveReceivers(list) {
+    try { localStorage.setItem('rnr_receivers', JSON.stringify(list)); } catch {}
 }
 
 function populateReceivers(list) {
@@ -80,8 +96,9 @@ function addNewUser() {
         return;
     }
     receiversList.push(trimmed);
+    saveReceivers(receiversList);
     populateReceivers(receiversList);
-    showToast('User added for this session', 'success');
+    showToast(`"${trimmed}" added`, 'success');
 }
 
 receivedByInput.addEventListener('contextmenu', (e) => {
@@ -90,6 +107,7 @@ receivedByInput.addEventListener('contextmenu', (e) => {
     if (!currentName || currentName === '' || currentName === '__add__') return;
     if (!confirm(`Remove "${currentName}" from the list?`)) return;
     receiversList = receiversList.filter(n => n !== currentName);
+    saveReceivers(receiversList);
     populateReceivers(receiversList);
     showToast('User removed', 'success');
 });
