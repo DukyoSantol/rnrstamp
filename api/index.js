@@ -1,50 +1,28 @@
 const express = require('express');
-const multer = require('multer');
 const { PDFDocument, rgb, StandardFonts } = require('pdf-lib');
-const { v4: uuidv4 } = require('uuid');
 const cors = require('cors');
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
 
-const uploadedFiles = new Map();
 const DEFAULT_RECEIVERS = ['Ellen Mancera', 'Shiely Dilangalen'];
-
-const storage = multer.memoryStorage();
-const fileFilter = (req, file, cb) => {
-    file.mimetype === 'application/pdf' ? cb(null, true) : cb(new Error('Only PDF files are allowed'), false);
-};
-const upload = multer({ storage, fileFilter, limits: { fileSize: 50 * 1024 * 1024 } });
 
 app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', receivers: DEFAULT_RECEIVERS });
 });
 
-app.post('/api/upload', upload.single('pdf'), async (req, res) => {
-    try {
-        if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-        const pdfDoc = await PDFDocument.load(req.file.buffer);
-        const pageCount = pdfDoc.getPageCount();
-        const fileId = uuidv4();
-        uploadedFiles.set(fileId, { buffer: req.file.buffer, originalname: req.file.originalname });
-        res.json({ success: true, fileId, filename: req.file.originalname, pageCount });
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to upload file: ' + error.message });
-    }
-});
-
 app.post('/api/process', async (req, res) => {
     try {
-        const { fileId, docNumber, date, time, receivedBy, position, pages } = req.body;
-        if (!fileId || !uploadedFiles.has(fileId)) {
-            return res.status(400).json({ error: 'File not found. Please re-upload.' });
-        }
-        const fileInfo = uploadedFiles.get(fileId);
-        const pdfDoc = await PDFDocument.load(fileInfo.buffer);
+        const { fileBase64, docNumber, date, time, receivedBy, position, pages } = req.body;
+        if (!fileBase64) return res.status(400).json({ error: 'No file provided' });
+
+        const pdfBuffer = Buffer.from(fileBase64, 'base64');
+        const pdfDoc = await PDFDocument.load(pdfBuffer);
         const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
         const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
         const pageIndices = pages === 'first' ? [0] : pdfDoc.getPages().map((_, i) => i);
+
         for (const idx of pageIndices) {
             const page = pdfDoc.getPages()[idx];
             const { width: pw, height: ph } = page.getSize();
@@ -61,6 +39,7 @@ app.post('/api/process', async (req, res) => {
                 { docNumber, date, time, receivedBy },
                 { helveticaBold, helvetica });
         }
+
         const out = await pdfDoc.save();
         res.json({ success: true, pdf: Buffer.from(out).toString('base64') });
     } catch (error) {
@@ -68,26 +47,11 @@ app.post('/api/process', async (req, res) => {
     }
 });
 
-app.delete('/api/cleanup/:fileId', (req, res) => {
-    uploadedFiles.delete(req.params.fileId);
-    res.json({ success: true });
-});
-
 app.get('/api/receivers', (req, res) => {
     res.json({ receivers: DEFAULT_RECEIVERS });
 });
 
-app.post('/api/receivers', (req, res) => {
-    res.status(400).json({ error: 'Not available on serverless' });
-});
-
-app.delete('/api/receivers', (req, res) => {
-    res.status(400).json({ error: 'Not available on serverless' });
-});
-
 app.use((err, req, res, next) => {
-    if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE')
-        return res.status(400).json({ error: 'File too large. Maximum size is 50MB' });
     console.error(err.stack);
     res.status(500).json({ error: 'Something went wrong!' });
 });

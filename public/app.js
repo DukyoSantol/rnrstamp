@@ -1,7 +1,6 @@
 const API_BASE = '';
 
-let currentFileId = null;
-let currentFilename = null;
+let currentFileData = null;
 
 const uploadZone = document.getElementById('uploadZone');
 const fileInput = document.getElementById('fileInput');
@@ -23,7 +22,6 @@ const dateInput = document.getElementById('date');
 const timeInput = document.getElementById('time');
 const receivedByInput = document.getElementById('receivedBy');
 const positionSelect = document.getElementById('position');
-const addUserBtn = document.getElementById('addUserBtn');
 
 let receiversList = [];
 
@@ -32,14 +30,12 @@ function setDefaultDateTime() {
     const dateStr = now.toISOString().split('T')[0];
     const hours = String(now.getHours()).padStart(2, '0');
     const minutes = String(now.getMinutes()).padStart(2, '0');
-    const seconds = String(now.getSeconds()).padStart(2, '0');
     dateInput.value = dateStr;
     timeInput.value = `${hours}:${minutes}`;
 }
 
 setDefaultDateTime();
 loadReceivers();
-
 setInterval(setDefaultDateTime, 1000);
 
 function loadReceivers() {
@@ -49,10 +45,7 @@ function loadReceivers() {
             receiversList = data.receivers || [];
             populateReceivers(receiversList);
         })
-        .catch(err => {
-            console.error('Error loading receivers:', err);
-            populateReceivers(['Ellen Mancera', 'Shiely Dilangalen']);
-        });
+        .catch(() => populateReceivers(['Ellen Mancera', 'Shiely Dilangalen']));
 }
 
 function populateReceivers(list) {
@@ -69,64 +62,6 @@ function populateReceivers(list) {
     receivedByInput.appendChild(addOpt);
 }
 
-receivedByInput.addEventListener('change', () => {
-    if (receivedByInput.value === '__add__') {
-        addNewUser();
-    }
-});
-
-function addNewUser() {
-    const name = prompt('Enter new user name:');
-    if (!name || !name.trim()) {
-        receivedByInput.value = receiversList[0] || '';
-        return;
-    }
-    
-    fetch(`${API_BASE}/api/receivers`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim() })
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.success) {
-            loadReceivers();
-            showToast('User added', 'success');
-        } else {
-            showToast(data.error || 'Failed to add', 'error');
-            receivedByInput.value = receiversList[0] || '';
-        }
-    })
-    .catch(err => {
-        showToast('Failed to add user', 'error');
-        receivedByInput.value = receiversList[0] || '';
-    });
-}
-
-receivedByInput.addEventListener('contextmenu', async (e) => {
-    e.preventDefault();
-    const currentName = receivedByInput.value;
-    if (!currentName || currentName === '' || currentName === '__add__') return;
-    if (!confirm(`Delete "${currentName}" from the list?`)) return;
-    
-    try {
-        const res = await fetch(`${API_BASE}/api/receivers`, {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: currentName })
-        });
-        const data = await res.json();
-        if (data.success) {
-            loadReceivers();
-            showToast('User deleted', 'success');
-        } else {
-            showToast(data.error || 'Failed to delete', 'error');
-        }
-    } catch (err) {
-        showToast('Failed to delete user', 'error');
-    }
-});
-
 uploadZone.addEventListener('click', () => fileInput.click());
 
 uploadZone.addEventListener('dragover', (e) => {
@@ -142,72 +77,33 @@ uploadZone.addEventListener('drop', (e) => {
     e.preventDefault();
     uploadZone.classList.remove('dragover');
     const files = e.dataTransfer.files;
-    if (files.length > 0) {
-        handleFileUpload(files[0]);
-    }
+    if (files.length > 0) handleFile(files[0]);
 });
 
 fileInput.addEventListener('change', (e) => {
-    if (e.target.files.length > 0) {
-        handleFileUpload(e.target.files[0]);
-    }
+    if (e.target.files.length > 0) handleFile(e.target.files[0]);
 });
 
-async function handleFileUpload(file) {
+function handleFile(file) {
     if (file.type !== 'application/pdf') {
         showToast('Please upload a PDF file', 'error');
         return;
     }
-
-    if (file.size > 50 * 1024 * 1024) {
-        showToast('File size must be less than 50MB', 'error');
+    if (file.size > 3 * 1024 * 1024) {
+        showToast('File size must be less than 3MB for serverless deployment', 'error');
         return;
     }
-
-    const formData = new FormData();
-    formData.append('pdf', file);
-
-    try {
-        const response = await fetch(`${API_BASE}/api/upload`, {
-            method: 'POST',
-            body: formData
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            currentFileId = data.fileId;
-            currentFilename = data.filename;
-            
-            uploadZone.style.display = 'none';
-            fileInfo.style.display = 'flex';
-            filenameEl.textContent = data.filename;
-            pageCountEl.textContent = `${data.pageCount} page${data.pageCount > 1 ? 's' : ''}`;
-            
-            processBtn.disabled = false;
-            showToast('File uploaded successfully', 'success');
-        } else {
-            showToast(data.error || 'Failed to upload file', 'error');
-        }
-    } catch (error) {
-        console.error('Upload error:', error);
-        showToast('Failed to upload file', 'error');
-    }
+    currentFileData = file;
+    uploadZone.style.display = 'none';
+    fileInfo.style.display = 'flex';
+    filenameEl.textContent = file.name;
+    pageCountEl.textContent = `${(file.size / 1024).toFixed(0)} KB`;
+    processBtn.disabled = false;
+    showToast('File ready', 'success');
 }
 
-removeFileBtn.addEventListener('click', async () => {
-    if (currentFileId) {
-        try {
-            await fetch(`${API_BASE}/api/cleanup/${currentFileId}`, {
-                method: 'DELETE'
-            });
-        } catch (err) {
-            console.error('Cleanup error:', err);
-        }
-    }
-    
-    currentFileId = null;
-    currentFilename = null;
+removeFileBtn.addEventListener('click', () => {
+    currentFileData = null;
     fileInput.value = '';
     uploadZone.style.display = 'block';
     fileInfo.style.display = 'none';
@@ -218,13 +114,12 @@ removeFileBtn.addEventListener('click', async () => {
 stampForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    if (!currentFileId) {
-        showToast('Please upload a PDF file first', 'error');
+    if (!currentFileData) {
+        showToast('Please select a PDF file first', 'error');
         return;
     }
 
     const formData = {
-        fileId: currentFileId,
         docNumber: docNumberInput.value.trim(),
         date: dateInput.value,
         time: timeInput.value,
@@ -246,11 +141,11 @@ stampForm.addEventListener('submit', async (e) => {
     setLoading(true);
 
     try {
+        formData.fileBase64 = await fileToBase64(currentFileData);
+
         const response = await fetch(`${API_BASE}/api/process`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(formData)
         });
 
@@ -259,12 +154,9 @@ stampForm.addEventListener('submit', async (e) => {
         if (data.success) {
             const pdfBlob = base64ToBlob(data.pdf, 'application/pdf');
             const pdfUrl = URL.createObjectURL(pdfBlob);
-            
             pdfPreview.src = pdfUrl;
             previewSection.style.display = 'block';
-            
             previewSection.scrollIntoView({ behavior: 'smooth' });
-            
             showToast('PDF processed successfully', 'success');
         } else {
             showToast(data.error || 'Failed to process PDF', 'error');
@@ -276,6 +168,15 @@ stampForm.addEventListener('submit', async (e) => {
         setLoading(false);
     }
 });
+
+function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
 
 function base64ToBlob(base64, mimeType) {
     const byteCharacters = atob(base64);
@@ -290,14 +191,12 @@ function base64ToBlob(base64, mimeType) {
 downloadBtn.addEventListener('click', () => {
     const pdfUrl = pdfPreview.src;
     if (!pdfUrl) return;
-
     const link = document.createElement('a');
     link.href = pdfUrl;
-    link.download = `stamped_${currentFilename}`;
+    link.download = `stamped_${currentFileData ? currentFileData.name : 'document.pdf'}`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
     showToast('Download started', 'success');
 });
 
@@ -320,7 +219,6 @@ function resetPreview() {
 function setLoading(isLoading) {
     const btnText = processBtn.querySelector('.btn-text');
     const btnLoader = processBtn.querySelector('.btn-loader');
-    
     if (isLoading) {
         btnText.style.display = 'none';
         btnLoader.style.display = 'inline-flex';
@@ -328,30 +226,12 @@ function setLoading(isLoading) {
     } else {
         btnText.style.display = 'inline';
         btnLoader.style.display = 'none';
-        
-        if (currentFileId) {
-            processBtn.disabled = false;
-        }
+        if (currentFileData) processBtn.disabled = false;
     }
 }
 
 function showToast(message, type = 'info') {
     toastMessage.textContent = message;
     toast.className = `toast ${type} show`;
-    
-    setTimeout(() => {
-        toast.classList.remove('show');
-    }, 3000);
+    setTimeout(() => toast.classList.remove('show'), 3000);
 }
-
-window.addEventListener('beforeunload', async () => {
-    if (currentFileId) {
-        try {
-            await fetch(`${API_BASE}/api/cleanup/${currentFileId}`, {
-                method: 'DELETE'
-            });
-        } catch (err) {
-            console.error('Cleanup error:', err);
-        }
-    }
-});
