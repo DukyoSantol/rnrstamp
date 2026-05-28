@@ -60,7 +60,39 @@ function populateReceivers(list) {
     addOpt.value = '__add__';
     addOpt.textContent = '+ Add User';
     receivedByInput.appendChild(addOpt);
+    if (list.length > 0) receivedByInput.value = list[0];
 }
+
+receivedByInput.addEventListener('change', () => {
+    if (receivedByInput.value === '__add__') addNewUser();
+});
+
+function addNewUser() {
+    const name = prompt('Enter new user name:');
+    if (!name || !name.trim()) {
+        receivedByInput.value = receiversList[0] || '';
+        return;
+    }
+    const trimmed = name.trim();
+    if (receiversList.includes(trimmed)) {
+        showToast('Already exists', 'error');
+        receivedByInput.value = trimmed;
+        return;
+    }
+    receiversList.push(trimmed);
+    populateReceivers(receiversList);
+    showToast('User added for this session', 'success');
+}
+
+receivedByInput.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    const currentName = receivedByInput.value;
+    if (!currentName || currentName === '' || currentName === '__add__') return;
+    if (!confirm(`Remove "${currentName}" from the list?`)) return;
+    receiversList = receiversList.filter(n => n !== currentName);
+    populateReceivers(receiversList);
+    showToast('User removed', 'success');
+});
 
 uploadZone.addEventListener('click', () => fileInput.click());
 
