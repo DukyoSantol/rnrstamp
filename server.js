@@ -187,12 +187,16 @@ app.use((err, req, res, next) => {
     res.status(500).json({ error: 'Something went wrong!' });
 });
 
-app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-    console.log(`Upload dir: ${uploadDir}`);
-    console.log(`Public dir: ${publicDir}`);
-    console.log(`Don't close this window`);
-});
+if (require.main === module) {
+    app.listen(PORT, () => {
+        console.log(`Server running on http://localhost:${PORT}`);
+        console.log(`Upload dir: ${uploadDir}`);
+        console.log(`Public dir: ${publicDir}`);
+        console.log(`Don't close this window`);
+    });
+}
+
+module.exports = app;
 
 // Keep process alive for exe
 if (isPkg) {
