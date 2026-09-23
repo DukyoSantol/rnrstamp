@@ -11,8 +11,11 @@ const PORT = process.env.PORT || 3001;
 
 // Detect if running as packaged exe
 const isPkg = typeof process.pkg !== 'undefined';
+const isVercel = process.env.VERCEL === '1';
 const appDir = isPkg ? path.dirname(process.execPath) : __dirname;
-const uploadDir = isPkg ? path.join(appDir, 'uploads') : path.join(__dirname, 'uploads');
+const uploadDir = isVercel
+    ? path.join('/tmp', 'rnr-uploads')
+    : (isPkg ? path.join(appDir, 'uploads') : path.join(__dirname, 'uploads'));
 const publicDir = isPkg ? path.join(appDir, 'public') : path.join(__dirname, 'public');
 
 app.use(cors());
