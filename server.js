@@ -26,12 +26,19 @@ app.use(express.static(publicDir));
 const uploadedFiles = new Map();
 const defaultReceiver = 'Ellen Mancera';
 
-if (!fs.existsSync(uploadDir)) {
+if (!isVercel && !fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
 }
 
 const storage = multer.diskStorage({
-    destination: (req, file, cb) => { cb(null, uploadDir); },
+    destination: (req, file, cb) => {
+        try {
+            fs.mkdirSync(uploadDir, { recursive: true });
+            cb(null, uploadDir);
+        } catch (error) {
+            cb(error);
+        }
+    },
     filename: (req, file, cb) => { cb(null, `${uuidv4()}-${file.originalname}`); }
 });
 
