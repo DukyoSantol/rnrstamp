@@ -25,8 +25,7 @@
     "express": "^5.2.1",
     "multer": "^2.1.1",
     "pdf-lib": "^1.17.1",
-    "sharp": "^0.34.5",
-    "uuid": "^14.0.0"
+    "sharp": "^0.34.5"
   },
   "devDependencies": {
     "@yao-pkg/pkg": "^6.19.0"

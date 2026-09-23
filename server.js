@@ -1,7 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const { PDFDocument, rgb, StandardFonts } = require('pdf-lib');
-const { v4: uuidv4 } = require('uuid');
+const { randomUUID } = require('crypto');
 const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
@@ -39,7 +39,7 @@ const storage = multer.diskStorage({
             cb(error);
         }
     },
-    filename: (req, file, cb) => { cb(null, `${uuidv4()}-${file.originalname}`); }
+    filename: (req, file, cb) => { cb(null, `${randomUUID()}-${file.originalname}`); }
 });
 
 const fileFilter = (req, file, cb) => {
@@ -57,7 +57,7 @@ app.post('/api/upload', upload.single('pdf'), async (req, res) => {
         const pdfDoc = await PDFDocument.load(pdfBytes);
         const pageCount = pdfDoc.getPageCount();
 
-        const fileId = uuidv4();
+        const fileId = randomUUID();
         uploadedFiles.set(fileId, { path: req.file.path, originalname: req.file.originalname });
 
         res.json({ success: true, fileId, filename: req.file.originalname, pageCount });
