@@ -21,6 +21,7 @@ app.use(express.static(publicDir));
 
 // In-memory file map
 const uploadedFiles = new Map();
+const defaultReceiver = 'Ellen Mancera';
 
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
@@ -132,10 +133,13 @@ function loadReceivers() {
     try {
         if (fs.existsSync(receiversFile)) {
             const data = fs.readFileSync(receiversFile, 'utf-8');
-            return JSON.parse(data).receivers || [];
+            const receivers = JSON.parse(data).receivers || [];
+            return receivers.includes(defaultReceiver)
+                ? receivers
+                : [defaultReceiver, ...receivers];
         }
     } catch (e) { console.error('Error loading receivers:', e.message); }
-    return ['Ellen Mancera', 'Shiely Dilangalen'];
+    return [defaultReceiver, 'Shiely Dilangalen'];
 }
 
 function saveReceivers(list) {
@@ -165,6 +169,9 @@ app.delete('/api/receivers', (req, res) => {
     const { name } = req.body;
     if (!name || !name.trim()) {
         return res.status(400).json({ error: 'Name is required' });
+    }
+    if (name.trim() === defaultReceiver) {
+        return res.status(400).json({ error: `${defaultReceiver} is the default receiver and cannot be deleted` });
     }
     let list = loadReceivers();
     list = list.filter(n => n !== name.trim());

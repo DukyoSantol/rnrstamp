@@ -102,6 +102,10 @@ receivedByInput.addEventListener('contextmenu', async (e) => {
     e.preventDefault();
     const currentName = receivedByInput.value;
     if (!currentName || currentName === '' || currentName === '__add__') return;
+    if (currentName === 'Ellen Mancera') {
+        showToast('Ellen Mancera is the default receiver and cannot be deleted', 'error');
+        return;
+    }
     if (!confirm(`Delete "${currentName}" from the list?`)) return;
     
     try {
