@@ -51,9 +51,16 @@ app.post('/api/upload', upload.single('pdf'), async (req, res) => {
 
         res.json({ success: true, fileId, filename: req.file.originalname, pageCount });
     } catch (error) {
+        if (req.file?.path) {
+            try { fs.unlinkSync(req.file.path); } catch (_) {}
+        }
         console.error('Upload error details:', error.message);
         console.error(error.stack);
-        res.status(500).json({ error: 'Failed to upload file: ' + error.message });
+        const status = isEncryptedPdfError(error) ? 400 : 500;
+        const message = isEncryptedPdfError(error)
+            ? 'This PDF is encrypted or password-protected. Unlock it and upload it again.'
+            : 'Failed to upload file: ' + error.message;
+        res.status(status).json({ error: message });
     }
 });
 
@@ -99,9 +106,17 @@ app.post('/api/process', async (req, res) => {
 
     } catch (error) {
         console.error('Processing error:', error);
-        res.status(500).json({ error: 'Failed to process PDF: ' + error.message });
+        const status = isEncryptedPdfError(error) ? 400 : 500;
+        const message = isEncryptedPdfError(error)
+            ? 'This PDF is encrypted or password-protected. Unlock it and upload it again.'
+            : 'Failed to process PDF: ' + error.message;
+        res.status(status).json({ error: message });
     }
 });
+
+function isEncryptedPdfError(error) {
+    return /encrypted|password.?protected|encryption/i.test(error?.message || '');
+}
 
 // ── Cleanup ─────────────────────────────────────────────────────────────────
 app.delete('/api/cleanup/:fileId', (req, res) => {
