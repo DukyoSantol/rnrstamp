@@ -139,8 +139,8 @@ function handleFile(file) {
         showToast('Please upload a PDF file', 'error');
         return;
     }
-    if (file.size > 4 * 1024 * 1024) {
-        showToast('File size must be less than 4MB', 'error');
+    if (file.size > 50 * 1024 * 1024) {
+        showToast('File size must be less than 50MB', 'error');
         return;
     }
     currentFileData = file;
@@ -192,6 +192,12 @@ stampForm.addEventListener('submit', async (e) => {
         });
 
         console.log('Upload response status:', uploadResponse.status);
+
+        if (uploadResponse.status === 413) {
+            showToast('File too large. Maximum size is 4MB on Vercel. Use local server for larger files.', 'error');
+            return;
+        }
+
         const uploadData = await uploadResponse.json();
         console.log('Upload response data:', uploadData);
 

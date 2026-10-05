@@ -96,7 +96,12 @@ app.delete('/api/cleanup/:fileId', (req, res) => {
 });
 
 app.get('/api/receivers', (req, res) => {
-    res.json({ receivers: DEFAULT_RECEIVERS });
+    try {
+        res.json({ receivers: DEFAULT_RECEIVERS });
+    } catch (error) {
+        console.error('Receivers error:', error);
+        res.status(500).json({ error: 'Failed to load receivers' });
+    }
 });
 
 app.use((err, req, res, next) => {
