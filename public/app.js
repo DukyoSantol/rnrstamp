@@ -25,12 +25,20 @@ const positionSelect = document.getElementById('position');
 
 let receiversList = [];
 
+let userModifiedDateTime = false;
+
+dateInput.addEventListener('input', () => { userModifiedDateTime = true; });
+timeInput.addEventListener('input', () => { userModifiedDateTime = true; });
+
 function setDefaultDateTime() {
+    if (userModifiedDateTime) return;
     const now = new Date();
-    const dateStr = now.toISOString().split('T')[0];
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
     const hours = String(now.getHours()).padStart(2, '0');
     const minutes = String(now.getMinutes()).padStart(2, '0');
-    dateInput.value = dateStr;
+    dateInput.value = `${year}-${month}-${day}`;
     timeInput.value = `${hours}:${minutes}`;
 }
 
@@ -287,6 +295,7 @@ downloadBtn.addEventListener('click', () => {
 resetBtn.addEventListener('click', resetForm);
 
 function resetForm() {
+    userModifiedDateTime = false;
     docNumberInput.value = '';
     receivedByInput.value = '';
     setDefaultDateTime();
