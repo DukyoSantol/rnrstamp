@@ -1,36 +1,19 @@
 {
-  "name": "rnr",
-  "version": "1.0.0",
-  "description": "",
-  "main": "server.js",
+  "name": "workspace",
+  "version": "0.0.0",
+  "license": "MIT",
   "scripts": {
-    "start": "node server.js",
-    "build": "pkg server.js --output rnr.exe --public",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "preinstall": "sh -c 'rm -f package-lock.json yarn.lock; case \"$npm_config_user_agent\" in pnpm/*) ;; *) echo \"Use pnpm instead\" >&2; exit 1 ;; esac'",
+    "build": "pnpm run typecheck && pnpm -r --if-present run build",
+    "typecheck:libs": "tsc --build",
+    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
-  "bin": "server.js",
-  "pkg": {
-    "assets": [
-      "public/**/*",
-      "uploads/**/*"
-    ],
-    "outputPath": "dist"
-  },
+  "private": true,
   "dependencies": {
-    "cors": "^2.8.6",
-    "express": "^5.2.1",
-    "multer": "^2.1.1",
-    "pdf-lib": "^1.17.1",
-    "sharp": "^0.34.5"
+    "@replit/connectors-sdk": "^0.4.3"
   },
   "devDependencies": {
-    "@yao-pkg/pkg": "^6.19.0"
-  },
-  "engines": {
-    "node": ">=18"
+    "prettier": "^3.9.6",
+    "typescript": "~5.9.3"
   }
 }
