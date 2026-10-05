@@ -139,8 +139,8 @@ function handleFile(file) {
         showToast('Please upload a PDF file', 'error');
         return;
     }
-    if (file.size > 50 * 1024 * 1024) {
-        showToast('File size must be less than 50MB', 'error');
+    if (file.size > 4 * 1024 * 1024) {
+        showToast('File size must be less than 4MB', 'error');
         return;
     }
     currentFileData = file;
@@ -191,7 +191,9 @@ stampForm.addEventListener('submit', async (e) => {
             body: uploadFormData
         });
 
+        console.log('Upload response status:', uploadResponse.status);
         const uploadData = await uploadResponse.json();
+        console.log('Upload response data:', uploadData);
 
         if (!uploadData.success) {
             showToast(uploadData.error || 'Failed to upload file', 'error');

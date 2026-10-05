@@ -19,7 +19,7 @@ const fileFilter = (req, file, cb) => {
     file.mimetype === 'application/pdf' ? cb(null, true) : cb(new Error('Only PDF files are allowed'), false);
 };
 
-const upload = multer({ storage, fileFilter, limits: { fileSize: 50 * 1024 * 1024 } });
+const upload = multer({ storage, fileFilter, limits: { fileSize: 4 * 1024 * 1024 } });
 
 app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', receivers: DEFAULT_RECEIVERS });
@@ -101,7 +101,7 @@ app.get('/api/receivers', (req, res) => {
 
 app.use((err, req, res, next) => {
     if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE')
-        return res.status(400).json({ error: 'File too large. Maximum size is 50MB' });
+        return res.status(400).json({ error: 'File too large. Maximum size is 4MB' });
     console.error(err.stack);
     res.status(500).json({ error: 'Something went wrong!' });
 });
