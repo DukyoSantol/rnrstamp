@@ -139,8 +139,8 @@ function handleFile(file) {
         showToast('Please upload a PDF file', 'error');
         return;
     }
-    if (file.size > 10 * 1024 * 1024) {
-        showToast('File size must be less than 10MB', 'error');
+    if (file.size > 50 * 1024 * 1024) {
+        showToast('File size must be less than 50MB', 'error');
         return;
     }
     currentFileData = file;
