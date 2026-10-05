@@ -17,6 +17,11 @@ const resetBtn = document.getElementById('resetBtn');
 const toast = document.getElementById('toast');
 const toastMessage = document.getElementById('toastMessage');
 
+const loadingOverlay = document.getElementById('loadingOverlay');
+const loadingLabel = document.getElementById('loadingLabel');
+const loadingBarFill = document.getElementById('loadingBarFill');
+const loadingPercent = document.getElementById('loadingPercent');
+
 const docNumberInput = document.getElementById('docNumber');
 const dateInput = document.getElementById('date');
 const timeInput = document.getElementById('time');
@@ -206,8 +211,7 @@ stampForm.addEventListener('submit', async (e) => {
             
             xhr.upload.onprogress = (e) => {
                 if (e.lengthComputable) {
-                    const percent = Math.round((e.loaded / e.total) * 100);
-                    showToast(`Uploading... ${percent}%`, 'info');
+                    updateProgress(Math.round((e.loaded / e.total) * 100), 'Uploading...');
                 }
             };
             
@@ -241,6 +245,7 @@ stampForm.addEventListener('submit', async (e) => {
         }
 
         // Step 2: Process the file with the fileId
+        updateProgress(100, 'Processing stamp...');
         const processResponse = await fetch(`${API_BASE}/api/process`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -321,11 +326,23 @@ function setLoading(isLoading) {
         btnText.style.display = 'none';
         btnLoader.style.display = 'inline-flex';
         processBtn.disabled = true;
+        updateProgress(0, 'Uploading...');
+        loadingOverlay.classList.add('show');
     } else {
         btnText.style.display = 'inline';
         btnLoader.style.display = 'none';
         if (currentFileData) processBtn.disabled = false;
+        loadingOverlay.classList.remove('show');
+        loadingBarFill.classList.remove('done');
     }
+}
+
+function updateProgress(percent, label) {
+    const value = Math.min(100, Math.max(0, percent));
+    if (label) loadingLabel.textContent = label;
+    loadingBarFill.style.width = `${value}%`;
+    loadingPercent.textContent = `${value}%`;
+    if (value >= 100) loadingBarFill.classList.add('done');
 }
 
 function showToast(message, type = 'info') {
