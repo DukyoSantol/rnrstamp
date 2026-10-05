@@ -182,31 +182,48 @@ stampForm.addEventListener('submit', async (e) => {
     setLoading(true);
 
     try {
-        const formData = new FormData();
-        formData.append('pdf', currentFileData);
-        formData.append('docNumber', docNumber);
-        formData.append('date', dateInput.value);
-        formData.append('time', timeInput.value);
-        formData.append('receivedBy', receivedByInput.value.trim());
-        formData.append('position', positionSelect.value);
-        formData.append('pages', document.querySelector('input[name="pages"]:checked').value);
+        // Step 1: Upload the file
+        const uploadFormData = new FormData();
+        uploadFormData.append('pdf', currentFileData);
 
-        const response = await fetch(`${API_BASE}/api/process`, {
+        const uploadResponse = await fetch(`${API_BASE}/api/upload`, {
             method: 'POST',
-            body: formData
+            body: uploadFormData
         });
 
-        const data = await response.json();
+        const uploadData = await uploadResponse.json();
 
-        if (data.success) {
-            const pdfBlob = base64ToBlob(data.pdf, 'application/pdf');
+        if (!uploadData.success) {
+            showToast(uploadData.error || 'Failed to upload file', 'error');
+            return;
+        }
+
+        // Step 2: Process the file with the fileId
+        const processResponse = await fetch(`${API_BASE}/api/process`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                fileId: uploadData.fileId,
+                docNumber: docNumber,
+                date: dateInput.value,
+                time: timeInput.value,
+                receivedBy: receivedByInput.value.trim(),
+                position: positionSelect.value,
+                pages: document.querySelector('input[name="pages"]:checked').value
+            })
+        });
+
+        const processData = await processResponse.json();
+
+        if (processData.success) {
+            const pdfBlob = base64ToBlob(processData.pdf, 'application/pdf');
             const pdfUrl = URL.createObjectURL(pdfBlob);
             pdfPreview.src = pdfUrl;
             previewSection.style.display = 'block';
             previewSection.scrollIntoView({ behavior: 'smooth' });
             showToast('PDF processed successfully', 'success');
         } else {
-            showToast(data.error || 'Failed to process PDF', 'error');
+            showToast(processData.error || 'Failed to process PDF', 'error');
         }
     } catch (error) {
         console.error('Processing error:', error);
