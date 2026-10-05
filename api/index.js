@@ -1,34 +1,70 @@
 const express = require('express');
 const multer = require('multer');
 const { PDFDocument, rgb, StandardFonts } = require('pdf-lib');
+const { v4: uuidv4 } = require('uuid');
 const cors = require('cors');
 
 const app = express();
 app.use(cors());
+app.use(express.json());
+
+// In-memory file map
+const uploadedFiles = new Map();
 
 const DEFAULT_RECEIVERS = ['Ellen Mancera', 'Shiely Dilangalen'];
 
 const storage = multer.memoryStorage();
-const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
+
+const fileFilter = (req, file, cb) => {
+    file.mimetype === 'application/pdf' ? cb(null, true) : cb(new Error('Only PDF files are allowed'), false);
+};
+
+const upload = multer({ storage, fileFilter, limits: { fileSize: 50 * 1024 * 1024 } });
 
 app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', receivers: DEFAULT_RECEIVERS });
 });
 
-app.post('/api/process', upload.single('pdf'), async (req, res) => {
+// Upload endpoint
+app.post('/api/upload', upload.single('pdf'), async (req, res) => {
     try {
-        const pdfBuffer = req.file ? req.file.buffer : (req.body.fileBase64 ? Buffer.from(req.body.fileBase64, 'base64') : null);
-        if (!pdfBuffer) return res.status(400).json({ error: 'No file provided' });
+        if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
-        const { docNumber, date, time, receivedBy, position, pages } = req.body;
-        const pdfDoc = await PDFDocument.load(pdfBuffer);
+        const pdfDoc = await PDFDocument.load(req.file.buffer);
+        const pageCount = pdfDoc.getPageCount();
+
+        const fileId = uuidv4();
+        uploadedFiles.set(fileId, { buffer: req.file.buffer, originalname: req.file.originalname });
+
+        res.json({ success: true, fileId, filename: req.file.originalname, pageCount });
+    } catch (error) {
+        console.error('Upload error details:', error.message);
+        console.error(error.stack);
+        res.status(500).json({ error: 'Failed to upload file: ' + error.message });
+    }
+});
+
+// Process endpoint
+app.post('/api/process', async (req, res) => {
+    try {
+        const { fileId, docNumber, date, time, receivedBy, position, pages } = req.body;
+
+        if (!fileId || !uploadedFiles.has(fileId)) {
+            return res.status(400).json({ error: 'File not found. Please re-upload.' });
+        }
+
+        const fileInfo = uploadedFiles.get(fileId);
+        const pdfDoc = await PDFDocument.load(fileInfo.buffer);
+
         const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
         const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
+
         const pageIndices = pages === 'first' ? [0] : pdfDoc.getPages().map((_, i) => i);
 
         for (const idx of pageIndices) {
             const page = pdfDoc.getPages()[idx];
             const { width: pw, height: ph } = page.getSize();
+
             const stampW = 245, stampH = 115, margin = 20;
             let sx, sy;
             switch (position) {
@@ -38,6 +74,7 @@ app.post('/api/process', upload.single('pdf'), async (req, res) => {
                 case 'center': sx = (pw - stampW) / 2; sy = (ph - stampH) / 2; break;
                 default: sx = pw - stampW - margin; sy = margin; break;
             }
+
             drawMGBStamp(page, sx, sy, stampW, stampH,
                 { docNumber, date, time, receivedBy },
                 { helveticaBold, helvetica });
@@ -45,9 +82,17 @@ app.post('/api/process', upload.single('pdf'), async (req, res) => {
 
         const out = await pdfDoc.save();
         res.json({ success: true, pdf: Buffer.from(out).toString('base64') });
+
     } catch (error) {
+        console.error('Processing error:', error);
         res.status(500).json({ error: 'Failed to process PDF: ' + error.message });
     }
+});
+
+// Cleanup endpoint
+app.delete('/api/cleanup/:fileId', (req, res) => {
+    uploadedFiles.delete(req.params.fileId);
+    res.json({ success: true });
 });
 
 app.get('/api/receivers', (req, res) => {
@@ -56,7 +101,7 @@ app.get('/api/receivers', (req, res) => {
 
 app.use((err, req, res, next) => {
     if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE')
-        return res.status(400).json({ error: 'File too large. Maximum size is 10MB' });
+        return res.status(400).json({ error: 'File too large. Maximum size is 50MB' });
     console.error(err.stack);
     res.status(500).json({ error: 'Something went wrong!' });
 });
