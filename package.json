@@ -8,7 +8,6 @@
     "build": "echo \"No build step required\"",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "preinstall": "echo 'No preinstall script'",
   "keywords": [],
   "author": "",
   "license": "ISC",
