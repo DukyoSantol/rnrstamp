@@ -182,23 +182,44 @@ stampForm.addEventListener('submit', async (e) => {
     setLoading(true);
 
     try {
-        // Step 1: Upload the file
+        // Step 1: Upload the file with progress tracking
         const uploadFormData = new FormData();
         uploadFormData.append('pdf', currentFileData);
 
-        const uploadResponse = await fetch(`${API_BASE}/api/upload`, {
-            method: 'POST',
-            body: uploadFormData
+        // Use XMLHttpRequest for progress tracking
+        const uploadPromise = new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', `${API_BASE}/api/upload`);
+            
+            xhr.upload.onprogress = (e) => {
+                if (e.lengthComputable) {
+                    const percent = Math.round((e.loaded / e.total) * 100);
+                    showToast(`Uploading... ${percent}%`, 'info');
+                }
+            };
+            
+            xhr.onload = () => {
+                if (xhr.status === 413) {
+                    reject(new Error('File too large. Maximum size is 4MB on Vercel. Use local server for larger files.'));
+                } else if (xhr.status >= 400) {
+                    reject(new Error(`Upload failed with status ${xhr.status}`));
+                } else {
+                    try {
+                        resolve(JSON.parse(xhr.responseText));
+                    } catch (e) {
+                        reject(new Error('Invalid response from server'));
+                    }
+                }
+            };
+            
+            xhr.onerror = () => reject(new Error('Network error during upload'));
+            xhr.ontimeout = () => reject(new Error('Upload timeout'));
+            xhr.timeout = 120000; // 2 minute timeout
+            
+            xhr.send(uploadFormData);
         });
 
-        console.log('Upload response status:', uploadResponse.status);
-
-        if (uploadResponse.status === 413) {
-            showToast('File too large. Maximum size is 4MB on Vercel. Use local server for larger files.', 'error');
-            return;
-        }
-
-        const uploadData = await uploadResponse.json();
+        const uploadData = await uploadPromise;
         console.log('Upload response data:', uploadData);
 
         if (!uploadData.success) {
