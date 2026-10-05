@@ -46,6 +46,11 @@ setDefaultDateTime();
 loadReceivers();
 setInterval(setDefaultDateTime, 1000);
 
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) setDefaultDateTime();
+});
+window.addEventListener('focus', setDefaultDateTime);
+
 function loadReceivers() {
     fetch(`${API_BASE}/api/receivers`)
         .then(res => res.json())
